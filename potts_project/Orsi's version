@@ -120,9 +120,9 @@ L_squared = 16 * 16
 #energies_q2 = np.array(energies_q2) / L_squared
 #energies_q10 = np.array(energies_q10) / L_squared
 
-plt.plot(T_c_q2, energies_q2, label="q=2", fmt='.')
+plt.plot(T_c_q2, energies_q2, '.', label="q=2")
 #plt.errorbar(T_c_q2, energies_q2, yerr=errors_q2, fmt='o-', label="q=2", capsize=3)
-plt.plot(T_c_q10, energies_q10, label="q=10", fmt='.')
+plt.plot(T_c_q10, energies_q10, '.', label="q=10")
 plt.xlabel("Temperature (T)")
 plt.ylabel("Average Energy per spin (E/N)")
 plt.legend()
