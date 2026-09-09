@@ -38,6 +38,10 @@ public:
 
   auto density(int E) const -> double { return std::exp(-Beta * E); }
 
+  auto setTemperature(double T) -> void {
+    Beta = 1.0 / T;
+  }
+
   auto tryMetropolisUpdate() -> bool {
     const auto [Row, Col, NewState] = propose();
 
@@ -172,5 +176,6 @@ NB_MODULE(qpotts_ext, M) {
       .def(nb::init<int, double, uint8_t, Start>())
       .def("try_metropolis_update", &PottsModel::tryMetropolisUpdate)
       .def("sample_metropolis", &PottsModel::sampleMetropolis)
-      .def("average_energy", &PottsModel::averageEnergy);
+      .def("average_energy", &PottsModel::averageEnergy)
+      .def("set_temperature", &PottsModel::setTemperature);
 }
