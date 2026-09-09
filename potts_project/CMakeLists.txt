@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15...3.26)
 
 project(qpotts LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (NOT SKBUILD)
@@ -59,3 +61,4 @@ nanobind_add_module(
 
 # Install directive for scikit-build-core
 install(TARGETS qpotts_ext LIBRARY DESTINATION qpotts)
+install(FILES lib/qpotts/__init__.py DESTINATION qpotts)
