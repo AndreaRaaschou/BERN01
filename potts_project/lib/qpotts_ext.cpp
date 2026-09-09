@@ -5,6 +5,7 @@
 #include <tuple>
 
 #include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -48,6 +49,29 @@ public:
     State[Row, Col] = NewState;
     TotalEnergy += EnergyChange;
     return true;
+  }
+
+  auto sampleMetropolis(int NumSamples, int NumBurnIns)
+      -> nb::ndarray<nb::numpy, double> {
+    double *Energies = new double[NumSamples];
+
+    for (int I = 0; I < NumBurnIns; I++)
+      tryMetropolisUpdate();
+
+    for (int I = 0; I < NumSamples; I++) {
+      tryMetropolisUpdate();
+      Energies[I] = averageEnergy();
+    }
+    
+    nb::capsule Owner(Energies, [](void *P) noexcept {
+      delete[] static_cast<double *>(P);
+    });
+
+    return nb::ndarray<nb::numpy, double>(
+      Energies,
+      {static_cast<size_t>(NumSamples)},
+      Owner
+    );
   }
 
 private:
@@ -140,12 +164,13 @@ private:
   }
 };
 
-NB_MODULE(qpotts_ext, m) {
-  nb::enum_<Start>(m, "Start")
+NB_MODULE(qpotts_ext, M) {
+  nb::enum_<Start>(M, "Start")
       .value("Cold", Start::Cold)
       .value("Hot", Start::Hot);
-  nb::class_<PottsModel>(m, "PottsModel")
+  nb::class_<PottsModel>(M, "PottsModel")
       .def(nb::init<int, double, uint8_t, Start>())
       .def("try_metropolis_update", &PottsModel::tryMetropolisUpdate)
+      .def("sample_metropolis", &PottsModel::sampleMetropolis)
       .def("average_energy", &PottsModel::averageEnergy);
 }
