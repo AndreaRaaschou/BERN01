@@ -26,8 +26,8 @@ jobs:
           # Build using Python 3.12 in a manylinux container.
           # The resulting wheel can be installed on compatible
           # Linux distributions such as Fedora.
-          - os: ubuntu-latest
-            cibw_build: "cp312-manylinux_x86_64"
+          # - os: ubuntu-latest
+          #   cibw_build: "cp312-manylinux_x86_64"
 
     steps:
       - name: Check out repository

@@ -101,7 +101,7 @@ private:
   std::mt19937 Gen;
 #endif
   std::uniform_int_distribution<int> LDist;
-  std::uniform_int_distribution<StateType> QDist;
+  std::uniform_int_distribution<int> QDist;
   std::uniform_int_distribution<int> NewStateDist;
   std::uniform_real_distribution<double> ADist{0.0, 1.0};
 
