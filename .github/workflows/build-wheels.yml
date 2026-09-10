@@ -13,21 +13,21 @@ jobs:
       matrix:
         include:
           # Windows x86-64
-          # Build using Python 3.13 and produce an ABI3 wheel.
-          - os: windows-2025
-            cibw_build: "cp313-win_amd64"
+          # Build using Python 3.12 and produce an ABI3 wheel.
+          - os: windows-latest
+            cibw_build: "cp312-win_amd64"
 
           # macOS Apple Silicon (M-series)
-          # macos-14 is an ARM64 runner.
-          - os: macos-14
-            cibw_build: "cp313-macosx_arm64"
+          # macos-latest is an ARM64 runner.
+          - os: macos-latest
+            cibw_build: "cp312-macosx_arm64"
 
           # Linux x86-64
-          # Build using Python 3.14 in a manylinux container.
+          # Build using Python 3.12 in a manylinux container.
           # The resulting wheel can be installed on compatible
           # Linux distributions such as Fedora.
-          - os: ubuntu-24.04
-            cibw_build: "cp314-manylinux_x86_64"
+          - os: ubuntu-latest
+            cibw_build: "cp312-manylinux_x86_64"
 
     steps:
       - name: Check out repository
