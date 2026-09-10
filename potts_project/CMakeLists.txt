@@ -37,6 +37,14 @@ find_package(Python 3.8
 # Import nanobind through CMake's find_package mechanism
 find_package(nanobind CONFIG REQUIRED)
 
+find_package(Boost QUIET COMPONENTS random)
+
+if(Boost_random_FOUND)
+  message(STATUS "Boost.Random: FOUND; using boost::random::xoshiro256pp")
+else()
+  message(STATUS "Boost.Random: NOT FOUND; defaulting to std::mt19937")
+endif()
+
 # We are now ready to compile the actual extension module
 nanobind_add_module(
   # Name of the extension
@@ -58,6 +66,11 @@ nanobind_add_module(
   # Source code goes here
   lib/qpotts_ext.cpp
 )
+
+if (Boost_random_FOUND)
+  target_link_libraries(qpotts_ext PRIVATE Boost::random)
+  target_compile_definitions(qpotts_ext PRIVATE HAVE_BOOST_RANDOM)
+endif()
 
 # Install directive for scikit-build-core
 install(TARGETS qpotts_ext LIBRARY DESTINATION qpotts)

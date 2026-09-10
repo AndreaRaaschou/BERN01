@@ -4,6 +4,10 @@
 #include <random>
 #include <tuple>
 
+#ifdef HAVE_BOOST_RANDOM
+#include <boost/random/xoshiro.hpp>
+#endif
+
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 
@@ -20,7 +24,7 @@ public:
       : L(L), Q(Q), Temperature(T), Beta(1.0 / T),
         StateData(std::make_unique<StateType[]>(L * L)),
         State(StateData.get(), L, L), Gen(Device()), LDist(0, L - 1),
-        QDist(0, Q - 1) {
+        QDist(0, Q - 2) {
     if (Start == Start::Hot) {
       for (int Row = 0; Row < State.extent(0); Row++)
         for (int Col = 0; Col < State.extent(1); Col++)
@@ -90,7 +94,11 @@ private:
   std::mdspan<StateType, std::dextents<int, 2>> State;
 
   std::random_device Device{};
+  #ifdef HAVE_BOOST_RANDOM
+  boost::random::xoshiro256pp Gen;
+  #else
   std::mt19937 Gen;
+  #endif
   std::uniform_int_distribution<int> LDist;
   std::uniform_int_distribution<StateType> QDist;
   std::uniform_real_distribution<double> ADist{0.0, 1.0};
@@ -99,6 +107,9 @@ private:
     int Row = LDist(Gen);
     int Col = LDist(Gen);
     StateType NewState = QDist(Gen);
+
+    [[unlikely]] if (NewState == State[Row, Col])
+      NewState = Q-1;
 
     return {Row, Col, NewState};
   }
