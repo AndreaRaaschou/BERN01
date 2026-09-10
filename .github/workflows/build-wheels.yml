@@ -1,0 +1,56 @@
+name: Build qpotts wheels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-wheels:
+    name: Build qpotts wheel - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows x86-64
+          # Build using Python 3.13 and produce an ABI3 wheel.
+          - os: windows-2025
+            cibw_build: "cp313-win_amd64"
+
+          # macOS Apple Silicon (M-series)
+          # macos-14 is an ARM64 runner.
+          - os: macos-14
+            cibw_build: "cp313-macosx_arm64"
+
+          # Linux x86-64
+          # Build using Python 3.14 in a manylinux container.
+          # The resulting wheel can be installed on compatible
+          # Linux distributions such as Fedora.
+          - os: ubuntu-24.04
+            cibw_build: "cp314-manylinux_x86_64"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Build qpotts wheel
+        uses: pypa/cibuildwheel@v4.2.1
+        with:
+          package-dir: ./potts_project
+
+        env:
+          # Build only the Python version appropriate for this runner.
+          #
+          # Because qpotts uses nanobind's stable ABI, the resulting
+          # extension is ABI3-compatible rather than tied to one
+          # Python minor version.
+          CIBW_BUILD: ${{ matrix.cibw_build }}
+
+          # Put wheels in a predictable directory.
+          CIBW_OUTPUT_DIR: ./wheelhouse
+
+      - name: Upload qpotts wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: qpotts-${{ matrix.os }}
+          path: wheelhouse/*.whl
