@@ -20,11 +20,11 @@ class PottsModel {
   using StateType = uint8_t;
 
 public:
-  PottsModel(int L, double T, StateType Q = 2, Start Start = Start::Cold)
+  PottsModel(int L, double T, StateType Q, Start Start)
       : L(L), Q(Q), Temperature(T), Beta(1.0 / T),
         StateData(std::make_unique<StateType[]>(L * L)),
         State(StateData.get(), L, L), Gen(Device()), LDist(0, L - 1),
-        QDist(0, Q - 2) {
+        QDist(0, Q - 1), NewStateDist(0, Q - 2) {
     if (Start == Start::Hot) {
       for (int Row = 0; Row < State.extent(0); Row++)
         for (int Col = 0; Col < State.extent(1); Col++)
@@ -42,9 +42,7 @@ public:
 
   auto density(int E) const -> double { return std::exp(-Beta * E); }
 
-  auto setTemperature(double T) -> void {
-    Beta = 1.0 / T;
-  }
+  auto setTemperature(double T) -> void { Beta = 1.0 / T; }
 
   auto tryMetropolisUpdate() -> bool {
     const auto [Row, Col, NewState] = propose();
@@ -70,16 +68,12 @@ public:
       tryMetropolisUpdate();
       Energies[I] = averageEnergy();
     }
-    
-    nb::capsule Owner(Energies, [](void *P) noexcept {
-      delete[] static_cast<double *>(P);
-    });
+
+    nb::capsule Owner(
+        Energies, [](void *P) noexcept { delete[] static_cast<double *>(P); });
 
     return nb::ndarray<nb::numpy, double>(
-      Energies,
-      {static_cast<size_t>(NumSamples)},
-      Owner
-    );
+        Energies, {static_cast<size_t>(NumSamples)}, Owner);
   }
 
 private:
@@ -94,22 +88,23 @@ private:
   std::mdspan<StateType, std::dextents<int, 2>> State;
 
   std::random_device Device{};
-  #ifdef HAVE_BOOST_RANDOM
+#ifdef HAVE_BOOST_RANDOM
   boost::random::xoshiro256pp Gen;
-  #else
+#else
   std::mt19937 Gen;
-  #endif
+#endif
   std::uniform_int_distribution<int> LDist;
   std::uniform_int_distribution<StateType> QDist;
+  std::uniform_int_distribution<int> NewStateDist;
   std::uniform_real_distribution<double> ADist{0.0, 1.0};
 
   auto propose() -> std::tuple<int, int, StateType> {
     int Row = LDist(Gen);
     int Col = LDist(Gen);
-    StateType NewState = QDist(Gen);
+    StateType NewState = NewStateDist(Gen);
 
     [[unlikely]] if (NewState == State[Row, Col])
-      NewState = Q-1;
+      NewState = Q - 1;
 
     return {Row, Col, NewState};
   }
@@ -184,9 +179,42 @@ NB_MODULE(qpotts_ext, M) {
       .value("Cold", Start::Cold)
       .value("Hot", Start::Hot);
   nb::class_<PottsModel>(M, "PottsModel")
-      .def(nb::init<int, double, uint8_t, Start>())
+      .def(nb::init<int, double, uint8_t, Start>(), "L"_a, "T"_a, "q"_a = 2,
+           "start"_a = Start::Cold,
+           R"doc(
+            Constructs a new PottsModel instance.
+
+            Parameters
+            ----------
+            L : int
+                Specifies lattice size N = `L` × `L`.
+            T : float
+                Temperature.
+            q : int
+                Number of states. Must be between 2 and 255 (the default is 2).
+            start : Start
+                Specifies cold- or hot-start. Valid values: `Start.Cold` and `Start.Hot (the default is `Start.Cold`).
+            )doc")
       .def("try_metropolis_update", &PottsModel::tryMetropolisUpdate)
-      .def("sample_metropolis", &PottsModel::sampleMetropolis)
-      .def("average_energy", &PottsModel::averageEnergy)
-      .def("set_temperature", &PottsModel::setTemperature);
+      .def("sample_metropolis", &PottsModel::sampleMetropolis, "num_samples"_a,
+           "num_burn_ins"_a = 0,
+           R"doc(
+            Samples energy states using Metropolis MCMC.
+
+            Parameters
+            ----------
+            num_samples : int
+                Number of samples to record.
+            num_burn_ins : int
+                Number of samples before starting recording (the default is 0).
+
+            Returns
+            -------
+            energies : np.ndarray
+                Average energy level (E / N) for each sample.
+            )doc")
+      .def("average_energy", &PottsModel::averageEnergy,
+           "Get the average energy E / N.")
+      .def("set_temperature", &PottsModel::setTemperature, "T"_a,
+           "Updates the temperature while keeping the state.");
 }
