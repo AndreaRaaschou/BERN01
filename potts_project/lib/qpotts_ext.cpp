@@ -1,4 +1,3 @@
-#include <iostream>
 #include <mdspan>
 #include <memory>
 #include <random>
@@ -13,6 +12,8 @@
 
 namespace nb = nanobind;
 using namespace nb::literals;
+
+namespace {
 
 enum class Start { Cold, Hot };
 
@@ -74,6 +75,12 @@ public:
 
     return nb::ndarray<nb::numpy, double>(
         Energies, {static_cast<size_t>(NumSamples)}, Owner);
+  }
+
+  auto stateView() -> nb::ndarray<StateType, nb::numpy> {
+    size_t NRows = static_cast<size_t>(State.extent(0));
+    size_t NCols = static_cast<size_t>(State.extent(1));
+    return nb::ndarray<StateType, nb::numpy>(StateData.get(), {NRows, NCols});
   }
 
 private:
@@ -174,6 +181,8 @@ private:
   }
 };
 
+} // namespace
+
 NB_MODULE(qpotts_ext, M) {
   nb::enum_<Start>(M, "Start")
       .value("Cold", Start::Cold)
@@ -210,11 +219,14 @@ NB_MODULE(qpotts_ext, M) {
 
             Returns
             -------
-            energies : np.ndarray
+            np.ndarray
                 Average energy level (E / N) for each sample.
             )doc")
       .def("average_energy", &PottsModel::averageEnergy,
            "Get the average energy E / N.")
       .def("set_temperature", &PottsModel::setTemperature, "T"_a,
-           "Updates the temperature while keeping the state.");
+           "Updates the temperature while keeping the state.")
+      .def("state_view", &PottsModel::stateView,
+           nb::rv_policy::reference_internal,
+           "Returns a `ndarray.view` to the state storage");
 }
