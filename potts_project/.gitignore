@@ -3,3 +3,4 @@ build
 .venv
 CMakeFiles
 CMakeCache.txt
+__pycache__
