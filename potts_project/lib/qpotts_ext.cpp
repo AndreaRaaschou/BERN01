@@ -77,6 +77,53 @@ public:
         Energies, {static_cast<size_t>(NumSamples)}, Owner);
   }
 
+  auto tryGibbsUpdate() -> bool {
+    int Row = LDist(Gen);
+    int Col = LDist(Gen);
+
+    // TODO: change to class member
+    std::vector<int> NeighbourCounts(Q);
+    std::vector<double> PDF(Q);
+
+    for (const auto Direction : AllDirections) {
+      StateType State = adjacentState(Row, Col, Direction);
+      NeighbourCounts[State]++;
+    }
+
+    for (int I = 0; I < Q; I++)
+      PDF[I] = std::exp(Beta * NeighbourCounts[I]);
+
+    std::discrete_distribution<int> NewStateDist{PDF.begin(), PDF.end()};
+
+    StateType OldState = State[Row, Col];
+    StateType NewState = NewStateDist(Gen);
+
+    int EnergyChange = -NeighbourCounts[NewState] + NeighbourCounts[OldState];
+    State[Row, Col] = NewState;
+    TotalEnergy += EnergyChange;
+
+    return true;
+  }
+
+  auto sampleGibbs(int NumSamples, int NumBurnIns)
+      -> nb::ndarray<nb::numpy, double> {
+    double *Energies = new double[NumSamples];
+
+    for (int I = 0; I < NumBurnIns; I++)
+      tryGibbsUpdate();
+
+    for (int I = 0; I < NumSamples; I++) {
+      tryGibbsUpdate();
+      Energies[I] = averageEnergy();
+    }
+
+    nb::capsule Owner(
+        Energies, [](void *P) noexcept { delete[] static_cast<double *>(P); });
+
+    return nb::ndarray<nb::numpy, double>(
+        Energies, {static_cast<size_t>(NumSamples)}, Owner);
+  }
+
   auto stateView() -> nb::ndarray<StateType, nb::numpy> {
     size_t NRows = static_cast<size_t>(State.extent(0));
     size_t NCols = static_cast<size_t>(State.extent(1));
@@ -117,6 +164,12 @@ private:
   }
 
   enum class Direction { North, South, East, West };
+  static constexpr std::array<Direction, 4> AllDirections = {
+      Direction::North,
+      Direction::South,
+      Direction::East,
+      Direction::West,
+  };
 
   auto adjacentState(int Row, int Col, Direction Direction) const -> StateType {
     switch (Direction) {
@@ -139,28 +192,18 @@ private:
   }
 
   auto computeEnergyChange(int Row, int Col, StateType NewState) const -> int {
-    if (NewState == State[Row, Col])
+    StateType StateHere = State[Row, Col];
+
+    if (NewState == StateHere)
       return 0;
 
-    StateType StateHere = State[Row, Col];
-    StateType StateNorth = adjacentState(Row, Col, Direction::North);
-    StateType StateSouth = adjacentState(Row, Col, Direction::South);
-    StateType StateEast = adjacentState(Row, Col, Direction::East);
-    StateType StateWest = adjacentState(Row, Col, Direction::West);
-
     int EnergyChange = 0;
-    EnergyChange -= (NewState == StateNorth) - (StateHere == StateNorth);
-    EnergyChange -= (NewState == StateSouth) - (StateHere == StateSouth);
-    EnergyChange -= (NewState == StateEast) - (StateHere == StateEast);
-    EnergyChange -= (NewState == StateWest) - (StateHere == StateWest);
+    for (const auto Direction : AllDirections) {
+      StateType StateThere = adjacentState(Row, Col, Direction);
+      EnergyChange -= (NewState == StateThere) - (StateHere == StateThere);
+    }
 
     return EnergyChange;
-  }
-
-  auto applyChange(int Row, int Col, StateType NewState, int EnergyChange)
-      -> void {
-    TotalEnergy += EnergyChange;
-    State[Row, Col] = NewState;
   }
 
   auto localEnergy(int Row, int Col) const -> int {
@@ -209,6 +252,23 @@ NB_MODULE(qpotts_ext, M) {
            "num_burn_ins"_a = 0,
            R"doc(
             Samples energy states using Metropolis MCMC.
+
+            Parameters
+            ----------
+            num_samples : int
+                Number of samples to record.
+            num_burn_ins : int
+                Number of samples before starting recording (the default is 0).
+
+            Returns
+            -------
+            np.ndarray
+                Average energy level (E / N) for each sample.
+            )doc")
+      .def("sample_gibbs", &PottsModel::sampleGibbs, "num_samples"_a,
+           "num_burn_ins"_a = 0,
+           R"doc(
+            Samples energy states using Gibbs MCMC.
 
             Parameters
             ----------
