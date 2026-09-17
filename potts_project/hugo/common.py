@@ -20,7 +20,7 @@ from qpotts import PottsModel, Start
 FIG_PATH = '../results/'
 
 # Common function definitions
-def curie_temp(q: int):
+def critical_temp(q: int):
     return 1 / (np.log(1 + np.sqrt(q)))
 
 def batch_means_method(arr: np.ndarray, min_num_blocks: int = 8):
