@@ -40,5 +40,5 @@ def iterate_until_equilibrium(pm: PottsModel, expect_increasing: bool, block_siz
     while True:
         mu_1 = np.mean(pm.sample_metropolis(block_size, 10))
         mu_2 = np.mean(pm.sample_metropolis(block_size, 10))
-        if (expect_increasing and mu_1 >= mu_2):
+        if (expect_increasing == (mu_1 >= mu_2)):
             return
