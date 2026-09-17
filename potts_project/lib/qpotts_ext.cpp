@@ -35,16 +35,22 @@ public:
     TotalEnergy = computeTotalEnergy();
   }
 
+  /// Returns the total energy E
   auto totalEnergy() -> int { return TotalEnergy; }
 
+  /// Returns average energy per spin E / N
   auto averageEnergy() -> double {
     return static_cast<double>(TotalEnergy) / static_cast<double>(State.size());
   }
 
   auto density(int E) const -> double { return std::exp(-Beta * E); }
 
+  /// Sets the temperature to \p T
   auto setTemperature(double T) -> void { Beta = 1.0 / T; }
 
+  /// Performs one iteration of the Metropolis algorithm.
+  ///
+  /// Returns `true` if proposed transition is accepted.
   auto tryMetropolisUpdate() -> bool {
     const auto [Row, Col, NewState] = propose();
 
@@ -58,6 +64,10 @@ public:
     return true;
   }
 
+  /// Performs \p NumBurnIns steps of Metropolis, discarding the results,
+  /// and then performs \p NumSamples steps while recording the energies.
+  ///
+  /// Returns a `numpy` array with average energy E / N for each sample
   auto sampleMetropolis(int NumSamples, int NumBurnIns)
       -> nb::ndarray<nb::numpy, double> {
     double *Energies = new double[NumSamples];
@@ -77,11 +87,13 @@ public:
         Energies, {static_cast<size_t>(NumSamples)}, Owner);
   }
 
+  /// Performs one iteration of Gibbs algorithm.
+  ///
+  /// Returns `true` unconditionally.
   auto tryGibbsUpdate() -> bool {
     int Row = LDist(Gen);
     int Col = LDist(Gen);
 
-    // TODO: change to class member
     std::vector<int> NeighbourCounts(Q);
     std::vector<double> PDF(Q);
 
@@ -105,6 +117,10 @@ public:
     return true;
   }
 
+  /// Performs \p NumBurnIns steps of Gibbs, discarding the results,
+  /// and then performs \p NumSamples steps while recording the energies.
+  ///
+  /// Returns a `numpy` array with average energy E / N for each sample
   auto sampleGibbs(int NumSamples, int NumBurnIns)
       -> nb::ndarray<nb::numpy, double> {
     double *Energies = new double[NumSamples];
@@ -124,6 +140,7 @@ public:
         Energies, {static_cast<size_t>(NumSamples)}, Owner);
   }
 
+  /// Returns a `numpy` view into data storing the instance state.
   auto stateView() -> nb::ndarray<StateType, nb::numpy> {
     size_t NRows = static_cast<size_t>(State.extent(0));
     size_t NCols = static_cast<size_t>(State.extent(1));
@@ -147,11 +164,20 @@ private:
 #else
   std::mt19937 Gen;
 #endif
+  /// Uniform distribution on {0, ..., L-1}.
   std::uniform_int_distribution<int> LDist;
+  /// Uniform distribution on {0, ..., Q-1}.
+  /// used for hot-starting
   std::uniform_int_distribution<int> QDist;
+  /// Uniform distribution on {0, ..., Q-2}.
+  /// Used in metropolis to propose new state distinct from current state.
   std::uniform_int_distribution<int> NewStateDist;
+  /// Uniform distribution on [0, 1].
+  /// Used in metropolis for deciding whether to accept or reject.
   std::uniform_real_distribution<double> ADist{0.0, 1.0};
 
+  /// Propose a lattice site `i` and an update `s_i -> s_i'` which is distinct
+  /// from the previous state.
   auto propose() -> std::tuple<int, int, StateType> {
     int Row = LDist(Gen);
     int Col = LDist(Gen);
@@ -191,6 +217,7 @@ private:
     return State[Row, Col];
   }
 
+  /// Computes change in total energy for proposed transition.
   auto computeEnergyChange(int Row, int Col, StateType NewState) const -> int {
     StateType StateHere = State[Row, Col];
 
@@ -239,7 +266,7 @@ NB_MODULE(qpotts_ext, M) {
             Parameters
             ----------
             L : int
-                Specifies lattice size N = `L` × `L`.
+                Specifies lattice size: N = `L` x `L`.
             T : float
                 Temperature.
             q : int
