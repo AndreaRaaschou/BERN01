@@ -37,8 +37,9 @@ def batch_means_method(arr: np.ndarray, min_num_blocks: int = 8):
     return np.max(sigma_list)
 
 def iterate_until_equilibrium(pm: PottsModel, expect_increasing: bool, block_size = 1_000_000):
+    mu_1 = np.mean(pm.sample_metropolis(block_size, 10))
     while True:
-        mu_1 = np.mean(pm.sample_metropolis(block_size, 10))
         mu_2 = np.mean(pm.sample_metropolis(block_size, 10))
         if (expect_increasing == (mu_1 >= mu_2)):
             return
+        mu_1 = mu_2
