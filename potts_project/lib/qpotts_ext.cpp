@@ -292,6 +292,7 @@ NB_MODULE(qpotts_ext, M) {
             np.ndarray
                 Average energy level (E / N) for each sample.
             )doc")
+      .def("try_gibbs_update", &PottsModel::tryGibbsUpdate)
       .def("sample_gibbs", &PottsModel::sampleGibbs, "num_samples"_a,
            "num_burn_ins"_a = 0,
            R"doc(

@@ -36,10 +36,31 @@ def batch_means_method(arr: np.ndarray, min_num_blocks: int = 8):
 
     return np.max(sigma_list)
 
-def iterate_until_equilibrium(pm: PottsModel, expect_increasing: bool, block_size = 1_000_000):
-    mu_1 = np.mean(pm.sample_metropolis(block_size, 10))
+def batch_means_sigma(arr: np.ndarray, min_num_blocks: int = 8):
+    sigma_list = []
     while True:
-        mu_2 = np.mean(pm.sample_metropolis(block_size, 10))
+        sigma = arr.std(ddof=1)
+        sigma_list.append(sigma)
+
+        if (arr.size <= min_num_blocks):
+            break
+
+        arr = arr.reshape(-1, 2).mean(axis=1)
+
+    return np.max(sigma_list)
+
+def iterate_until_equilibrium(pm: PottsModel, expect_increasing: bool, block_size = 1_000_000, method: str = 'metropolis'):
+    if method == 'metropolis':
+        mu_1 = np.mean(pm.sample_metropolis(block_size))
+    else:
+        mu_1 = np.mean(pm.sample_gibbs(block_size))
+
+    while True:
+        if method == 'metropolis':
+            mu_2 = np.mean(pm.sample_metropolis(block_size))
+        else:
+            mu_2 = np.mean(pm.sample_gibbs(block_size))
+            
         if (expect_increasing == (mu_1 >= mu_2)):
             return
         mu_1 = mu_2
