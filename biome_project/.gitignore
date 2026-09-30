@@ -1,0 +1,7 @@
+data/Tswrfdaymean1961_1990.csv
+data/Predaymean1961_1990.csv
+data/Tmaxdaymean1961_1990.csv
+data/Tmindaymean1961_1990.csv
+data/Tmpdaymean1961_1990.csv
+.DS_Store
+.ipynb_checkpoints/
