@@ -1,0 +1,9 @@
+pandas
+scikit-learn
+cartopy
+matplotlib
+seaborn
+shap
+ISLP
+jupyter
+notebook
