@@ -23,6 +23,7 @@ class Parameters:
         self.beta = beta
         self.gamma = gamma
         self.delta = delta
+        self.cfr = cfr
         self.n_cities = W.shape[0]
         self.W = jnp.array((1 - quarantine_factor) * W)
         self.W_colsum = jnp.sum(self.W, axis=0)
