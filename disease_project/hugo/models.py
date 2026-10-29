@@ -15,6 +15,7 @@ class Parameters:
         beta: float = _NAN,
         gamma: float = _NAN,
         delta: float = _NAN,
+        cfr: float = 0.0,
         W: np.ndarray = np.zeros((1, 1)),
         quarantine_factor: float = 0
     ) -> None:
