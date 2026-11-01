@@ -47,6 +47,8 @@ assert (
 ), "Unique geoids in trips_df and population_df do not match"
 _unique_geoids = _unique_geoids_trips.sort()
 
+assert _population_df["geoid"].to_list() == _unique_geoids.to_list() # added by andrea, checks that the ids are correct and matching
+
 _county_to_index = {geoid: i for i, geoid in enumerate(_unique_geoids.to_list())}
 
 _od_matrix = np.zeros((len(_unique_geoids), len(_unique_geoids)))
